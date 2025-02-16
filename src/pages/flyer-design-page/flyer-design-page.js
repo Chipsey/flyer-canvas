@@ -7,32 +7,65 @@ import {
   Box,
   Typography,
   Container,
+  Grid2,
 } from "@mui/material";
+import colorPalettes from "../../assets/const";
+import jsPDF from "jspdf";
 
-const FlyerDesign = ({ onGenerate }) => {
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [description, setDescription] = useState("");
+const FlyerDesign = () => {
+  const [title, setTitle] = useState("Back Cover");
+  const [subtitle, setSubtitle] = useState("iPhone 11");
+  const [description, setDescription] = useState(
+    "Luxury Original Phone Cases Compatible with Apple Iphone 11, And Also Suitable for Apple 15 Plus with Drop Protection."
+  );
+  const [price, setPrice] = useState(700);
+  const [sContent1, setSContent1] = useState("Limited Stock!");
+  const [sContent2, setSContent2] = useState("Available only at UOM area!");
   const [image, setImage] = useState(null);
   const [colors, setColors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const canvasRef = useRef(null);
+  const colorPallets = colorPalettes;
+  const [selectedColorPaletteIndex, setSelectedColorPaletteIndex] = useState();
+
+  const downloadCanvasAsImage = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const image = canvas.toDataURL("image/png"); // Convert to PNG
+
+    const link = document.createElement("a");
+    link.href = image;
+    link.download = "flyer.png"; // Filename
+    link.click();
+  };
+
+  const downloadCanvasAsPDF = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const pdf = new jsPDF("portrait", "px", [canvas.width, canvas.height]); // Set same size as canvas
+    const image = canvas.toDataURL("image/png"); // Convert to PNG
+
+    pdf.addImage(image, "PNG", 0, 0, canvas.width, canvas.height); // Add image to PDF
+    pdf.save("flyer.pdf"); // Save as PDF
+  };
+
+  useEffect(() => {
+    setSelectedColorPaletteIndex(4);
+    setColors(colorPallets[4]);
+  }, []);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (file && file.type.startsWith("image/")) {
       setImage(file);
+    } else {
+      alert("Please upload a valid image file.");
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!image) {
-      alert("Please upload an image.");
-      return;
-    }
-
+  const handleImageColorChange = async (e) => {
     setIsLoading(true);
 
     const formData = new FormData();
@@ -55,54 +88,78 @@ const FlyerDesign = ({ onGenerate }) => {
     }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!image) {
+      alert("Please upload an image.");
+      return;
+    }
+  };
+  const handlePaletteClick = (palette, index) => {
+    setColors(palette);
+    setSelectedColorPaletteIndex(index);
+    console.log("Selected Palette:", palette);
+  };
+
   // Function to draw on the canvas
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (colors.length < 1) {
+      return;
+    }
+
     const ctx = canvas.getContext("2d");
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    var modifiedColor;
 
     // Set background color if extracted colors exist
-    if (colors.length > 1) {
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, `rgba(${colors[0].rgb.join(",")},0.1)`);
-      gradient.addColorStop(0.3, `rgba(${colors[1].rgb.join(",")},0.06)`);
-      gradient.addColorStop(0.6, `rgba(${colors[1].rgb.join(",")},0.05)`);
-      gradient.addColorStop(1, `rgba(${colors[0].rgb.join(",")},0.1)`);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      modifiedColor = colors[0].rgb.map((value) => Math.min(value + 30, 255)); // Ensure RGB values don't exceed 255
-      ctx.fillStyle = `rgb(${modifiedColor.join(",")})`; // Apply modified color
-    } else {
-      // If not enough colors are available, use a solid background
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, `rgba(${colors[0].rgb.join(",")},0)`);
+    gradient.addColorStop(
+      1 - (canvas.height - canvas.width) / canvas.height,
+      `rgba(${colors[1].rgb.join(",")},0)`
+    );
+    gradient.addColorStop(
+      1 - (canvas.height - canvas.width) / canvas.height,
+      `rgba(${colors[1].rgb.join(",")},0.9)`
+    );
+    gradient.addColorStop(1, `rgba(${colors[0].rgb.join(",")},0.9)`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = `rgba(${colors[0].rgb.join(",")},1)`;
 
-    const lineHeight = 9 * 16; // Define line height (space between lines)
-    const margin = 20; // Define margin between title and description
+    // Constants for layout
+    const lineHeight = 9 * 16; // Line height
+    const margin = 20; // Margin between title and description
+    const titleY = canvas.width + 350; // Title Y position
 
-    // Draw the white box (you can adjust the position and size as needed)
-    ctx.fillRect(0, 0, 30, canvas.height); // Parameters: x, y, width, height
+    // Draw the white box
+    ctx.fillStyle = `rgba(${colors[2].rgb.join(",")},0.7)`;
+    ctx.fillRect((2 * canvas.width) / 3, 0, canvas.width / 3, 40);
 
+    ctx.fillStyle = `rgba(${colors[1].rgb.join(",")},0.7)`;
+    ctx.fillRect(canvas.width / 3, 0, canvas.width / 3, 40);
+
+    ctx.fillStyle = `rgba(${colors[0].rgb.join(",")},0.7)`;
+    ctx.fillRect(0, 0, canvas.width / 3, 40);
+
+    ctx.fillStyle = `rgba(${colors[2].rgb.join(",")},1)`;
     // Draw the title
-    ctx.font = "20rem Playlist";
-    ctx.fillStyle = `${modifiedColor != null ? `rgb(${modifiedColor.join(",")})` : "#000000"}`; // White color
-
+    ctx.font = "bold 12rem helvetica";
     const textWidth = ctx.measureText(title).width;
     const titleX = (canvas.width - textWidth) / 2;
-    const titleY = 3300; // Title Y position
     ctx.fillText(title, titleX, titleY);
 
-    ctx.font = "6rem helvetica";
+    // Draw subtitle
+    ctx.font = "5rem helvetica";
     const subTextWidth = ctx.measureText(subtitle).width;
     const subTitleX = (canvas.width - subTextWidth) / 2;
-    ctx.fillText(subtitle, subTitleX, titleY + 150);
+    ctx.fillText(subtitle, subTitleX, titleY + 120);
 
-    // Function to handle text wrapping
+    // Function to wrap text if it exceeds max width
     const wrapText = (text, maxWidth) => {
       const words = text.split(" ");
       let lines = [];
@@ -112,7 +169,6 @@ const FlyerDesign = ({ onGenerate }) => {
         let testLine = currentLine + words[i] + " ";
         let testWidth = ctx.measureText(testLine).width;
 
-        // If the line exceeds max width, push the current line and start a new one
         if (testWidth > maxWidth && currentLine.length > 0) {
           lines.push(currentLine);
           currentLine = words[i] + " ";
@@ -120,6 +176,7 @@ const FlyerDesign = ({ onGenerate }) => {
           currentLine = testLine;
         }
       }
+
       if (currentLine.length > 0) {
         lines.push(currentLine);
       }
@@ -127,64 +184,107 @@ const FlyerDesign = ({ onGenerate }) => {
       return lines;
     };
 
-    // Draw the description with wrapping
+    // Draw description with wrapping
     ctx.font = "5rem helvetica"; // Set font size for description
-    const maxWidth = canvas.width - 100 * 16; // Max width for text (with some margin)
+    const maxWidth = canvas.width - 100 * 16; // Max width with margin
     const descriptionLines = wrapText(description, maxWidth);
 
-    let desY = titleY + lineHeight + margin + 200; // Y position for description after title
+    let desY = titleY + lineHeight + margin + 130; // Y position for description
 
     // Draw each line of the description
     descriptionLines.forEach((line) => {
       const desWidth = ctx.measureText(line).width;
-      const desX = (canvas.width - desWidth) / 2; // Center the text horizontally
+      const desX = (canvas.width - desWidth) / 2;
       ctx.fillText(line, desX, desY);
-      desY += lineHeight; // Move to the next line
+      desY += lineHeight; // Move to next line
     });
 
-    ctx.font = "6rem helvetica";
+    // Footer text
+    ctx.font = "4rem helvetica";
+    const xillicaWidth = ctx.measureText("Xillica").width;
+    const xillicaX = (canvas.width - xillicaWidth) / 2;
+    ctx.fillText("Xillica", xillicaX, 6000 - 40);
 
-    ctx.fillText("Chipsey", 40, 5000 - 40);
+    // Draw circles if colors are available
+    // Circle 1: First color
+    const x1 = canvas.width / 2 - 10 - 80,
+      y1 = desY,
+      radius1 = 20;
+    ctx.fillStyle = `rgba(${colors[0].rgb.join(",")},1)`; // First color
+    ctx.beginPath();
+    ctx.arc(x1, y1, radius1, 0, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
 
-    //circles
-    if (colors.length > 1) {
-      // Draw first circle
-      // Circle 1: Red
-      const x1 = 2500 - 15 - 100,
-        y1 = desY,
-        radius1 = 30;
-      ctx.fillStyle = `rgba(${colors[0].rgb.join(",")},1)`; // Red color
-      ctx.beginPath();
-      ctx.arc(x1, y1, radius1, 0, 2 * Math.PI);
-      ctx.closePath();
-      ctx.fill();
+    // Circle 2: Second color
+    const x2 = canvas.width / 2 - 10,
+      y2 = desY,
+      radius2 = 20;
+    ctx.fillStyle = `rgba(${colors[1].rgb.join(",")},1)`; // Second color
+    ctx.beginPath();
+    ctx.arc(x2, y2, radius2, 0, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
 
-      // Circle 2: Green
-      const x2 = 2500 - 15,
-        y2 = desY,
-        radius2 = 30;
-      ctx.fillStyle = `rgba(${colors[1].rgb.join(",")},1)`; // Green color
-      ctx.beginPath();
-      ctx.arc(x2, y2, radius2, 0, 2 * Math.PI);
-      ctx.closePath();
-      ctx.fill();
+    // Circle 3: Third color
+    const x3 = canvas.width / 2 - 10 + 80,
+      y3 = desY,
+      radius3 = 20;
+    ctx.fillStyle = `rgba(${colors[2].rgb.join(",")},1)`;
+    ctx.beginPath();
+    ctx.arc(x3, y3, radius3, 0, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
 
-      // Circle 3: Blue
-      const x3 = 2500 - 15 + 100,
-        y3 = desY,
-        radius3 = 30;
-      ctx.fillStyle = `rgba(${colors[2].rgb.join(",")},1)`; // Blue color
-      ctx.beginPath();
-      ctx.arc(x3, y3, radius3, 0, 2 * Math.PI);
-      ctx.closePath();
-      ctx.fill();
+    // Load and draw the image onto the canvas if it exists
+    if (image) {
+      const img = new Image();
+      img.src = URL.createObjectURL(image); // Use the current uploaded image
+      img.onload = () => {
+        const imgX = 0; // Center the image horizontally
+        const imgY = 40; // Position image below description
+        ctx.drawImage(img, imgX, imgY, canvas.width, canvas.width);
+      };
     }
+    const content1Y = desY + 400;
+
+    ctx.fillStyle = `rgba(${colors[2].rgb.join(",")},0.2)`;
+    ctx.fillRect(canvas.width / 3, content1Y - 280, 10, 500);
+    ctx.fillRect((2 * canvas.width) / 3, content1Y - 280, 10, 500);
+
+    ctx.fillStyle = `rgba(${colors[2].rgb.join(",")},1)`;
+
+    ctx.font = "5rem helvetica";
+    const content1 = ctx.measureText(sContent1).width;
+    const content1X = (canvas.width - content1) / 8;
+    ctx.fillText(sContent1, content1X, content1Y);
+
+    ctx.font = "5rem helvetica";
+    const content21 = ctx.measureText("Best Price! Only,").width;
+    const content21X = (canvas.width - content21) / 2;
+    ctx.fillText("Best Price! Only,", content21X, content1Y - 80);
+
+    ctx.font = "bold 7rem helvetica";
+    const content2 = ctx.measureText(`Rs.${price}.00`).width;
+    const content2X = (canvas.width - content2) / 2;
+    ctx.fillText(`Rs.${price}.00`, content2X, content1Y + 80);
+
+    ctx.font = "5rem helvetica";
+    const content3X = (2 * canvas.width) / 3 + canvas.width / 20;
+    ctx.fillText(sContent2, content3X, content1Y);
+
+    const content4Y = content1Y + 400;
+
+    ctx.font = "bold 4.7rem helvetica";
+    const content4 = ctx.measureText("Whatsapp: 071 620 5445").width;
+    const content4X = (canvas.width - content4) / 2;
+    ctx.fillText("Whatsapp: 071 620 5445", content4X, content4Y);
   };
 
   // Redraw canvas when title, description, or colors change
   useEffect(() => {
     drawCanvas();
-  }, [title, subtitle, description, colors]);
+  }, [title, subtitle, description, colors, price, sContent1, sContent2]);
 
   return (
     <Container maxWidth="lg">
@@ -202,7 +302,14 @@ const FlyerDesign = ({ onGenerate }) => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               sx={{ mb: 2 }}
+              InputProps={{
+                style: { fontSize: "0.7rem" },
+              }}
+              InputLabelProps={{
+                style: { fontSize: "0.7rem" },
+              }}
             />
+
             <TextField
               fullWidth
               label="Subtitle"
@@ -210,6 +317,12 @@ const FlyerDesign = ({ onGenerate }) => {
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
               sx={{ mb: 2 }}
+              InputProps={{
+                style: { fontSize: "0.7rem" },
+              }}
+              InputLabelProps={{
+                style: { fontSize: "0.7rem" },
+              }}
             />
             <TextField
               fullWidth
@@ -219,26 +332,83 @@ const FlyerDesign = ({ onGenerate }) => {
               multiline
               onChange={(e) => setDescription(e.target.value)}
               sx={{ mb: 2 }}
+              InputProps={{
+                style: { fontSize: "0.7rem" },
+              }}
+              InputLabelProps={{
+                style: { fontSize: "0.7rem" },
+              }}
             />
+            <Grid2 container gap={2}>
+              <TextField
+                label="Price"
+                variant="outlined"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  style: { fontSize: "0.7rem" },
+                }}
+                InputLabelProps={{
+                  style: { fontSize: "0.7rem" },
+                }}
+              />
+              <TextField
+                label="Special Message 1"
+                variant="outlined"
+                value={sContent1}
+                multiline
+                onChange={(e) => setSContent1(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  style: { fontSize: "0.7rem" },
+                }}
+                InputLabelProps={{
+                  style: { fontSize: "0.7rem" },
+                }}
+              />
+              <TextField
+                label="Special Message 2"
+                variant="outlined"
+                value={sContent2}
+                multiline
+                onChange={(e) => setSContent2(e.target.value)}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  style: { fontSize: "0.7rem" },
+                }}
+                InputLabelProps={{
+                  style: { fontSize: "0.7rem" },
+                }}
+              />
+            </Grid2>
 
-            <Typography variant="body1">Upload Image:</Typography>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              style={{ marginBottom: 16 }}
-            />
+            <Box
+              sx={{
+                background: "rgba(0,0,0,0.1)",
+                padding: "1rem",
+                borderRadius: "1rem",
+              }}
+            >
+              <Typography variant="body1">Upload Image:</Typography>
+              <input
+                type="file"
+                accept="image/*"
+                onInput={handleImageChange}
+                style={{ marginBottom: 8 }}
+              />
 
-            <Box sx={{ mt: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={isLoading}
-                fullWidth
-              >
-                {isLoading ? <CircularProgress size={24} /> : "Extract Colors"}
-              </Button>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={isLoading}
+                  onClick={handleImageColorChange}
+                >
+                  {isLoading ? <CircularProgress size={24} /> : "Generate"}
+                </Button>
+              </Box>
             </Box>
           </form>
 
@@ -250,7 +420,7 @@ const FlyerDesign = ({ onGenerate }) => {
 
           {colors.length > 0 && !isLoading && (
             <Box sx={{ mt: 4 }}>
-              <Typography variant="h6">Extracted Colors:</Typography>
+              <Typography variant="h6">Blending Colors:</Typography>
               <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
                 {colors.map((color, index) => (
                   <Box
@@ -266,23 +436,77 @@ const FlyerDesign = ({ onGenerate }) => {
               </Box>
             </Box>
           )}
+          {colorPalettes.length > 0 && !isLoading && (
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h6">Color Palettes:</Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
+                {colorPalettes.map((palette, index) => (
+                  <Box
+                    key={index}
+                    onClick={() => handlePaletteClick(palette, index)}
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      alignItems: "center",
+                      backgroundColor:
+                        selectedColorPaletteIndex == index
+                          ? "rgba(70, 70, 70, 1)"
+                          : "rgba(176, 176, 176, 0.1)",
+                      padding: 1,
+                      borderRadius: 5,
+                    }}
+                  >
+                    {palette.map((color, colorIndex) => (
+                      <Box
+                        key={colorIndex}
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          backgroundColor: `rgb(${color.rgb.join(",")})`,
+                          borderRadius: "8px",
+                        }}
+                      />
+                    ))}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
         </Box>
 
         {/* Right Side - Canvas */}
-        <Box sx={{ flex: 1.5, paddingLeft: 2, overflow: "hidden" }}>
-          <Typography variant="h6" gutterBottom>
-            Real-Time Preview:
-          </Typography>
+        <Box sx={{ flex: 1, paddingLeft: 2, overflow: "hidden" }}>
+          <Box sx={{ mt: 2, mb: 2, display: "flex", gap: 2 }}>
+            <Typography variant="h8" gutterBottom>
+              Real-Time Preview:
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              sx={{ fontSize: "0.6rem", padding: "0px 8px" }}
+              onClick={downloadCanvasAsImage}
+            >
+              Download as Image
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              sx={{ fontSize: "0.6rem", padding: "0px 8px" }}
+              onClick={downloadCanvasAsPDF}
+            >
+              Download as PDF
+            </Button>
+          </Box>
           <canvas
             ref={canvasRef}
-            width={5000}
-            height={5000}
+            width={4000}
+            height={6000}
             style={{
               border: "1px solid #ccc",
               transform: "scale(0.1)", // Zoom out the canvas by 10%
               transformOrigin: "top left", // Ensure scaling from the top-left corner
-              width: "400rem", // Adjust based on zoom
-              height: "400rem", // Adjust based on zoom
+              width: "333.33rem", // Adjust based on zoom
+              height: "500rem", // Adjust based on zoom
             }}
           />
         </Box>
